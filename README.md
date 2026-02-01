@@ -8,7 +8,9 @@ When using ActiveJob's `retry_on` with `:polynomially_longer`, it's hard to ment
 
 ## Usage
 
-Open `index.html` in your browser. No server or dependencies required.
+**Online:** https://flixt.github.io/activejob-retry-calculator/
+
+**Local:** Open `index.html` in your browser. No server or dependencies required.
 
 ## Features
 
