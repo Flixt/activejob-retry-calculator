@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ActiveJob Retry Calculator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    h1 {
+      color: #cc0000;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .config-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .form-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #444;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #cc0000;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .code-preview {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-top: 15px;
+    }
+
+    .code-keyword {
+      color: #f92672;
+    }
+
+    .code-symbol {
+      color: #ae81ff;
+    }
+
+    .code-number {
+      color: #ae81ff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    th {
+      background: #cc0000;
+      color: white;
+      padding: 12px 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    .attempt-num {
+      font-weight: 600;
+      color: #cc0000;
+    }
+
+    .time-cell {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+    }
+
+    .remaining {
+      color: #888;
+    }
+
+    .final-row {
+      background: #fff3f3;
+      font-weight: 600;
+    }
+
+    .final-row td {
+      border-bottom: none;
+    }
+
+    .summary {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+
+    .summary h3 {
+      margin-top: 0;
+      color: #cc0000;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .summary-item {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+    }
+
+    .summary-label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .formula-section {
+      background: #fffbeb;
+      border: 1px solid #fbbf24;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+
+    .formula-section h4 {
+      margin: 0 0 10px 0;
+      color: #92400e;
+    }
+
+    .formula {
+      font-family: 'Monaco', 'Menlo', monospace;
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .jitter-note {
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .form-row {
+        flex-direction: column;
+      }
+
+      .form-group {
+        min-width: 100%;
+      }
+
+      table {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 8px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>ActiveJob Retry Calculator</h1>
+  <p class="subtitle">Visualize retry schedules for Rails ActiveJob's <code>retry_on</code></p>
+
+  <div class="config-section">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="wait-strategy">Wait Strategy</label>
+        <select id="wait-strategy">
+          <option value="polynomially_longer">:polynomially_longer</option>
+          <option value="fixed">Fixed duration (default: 3s)</option>
+        </select>
+        <p class="help-text">Default is 3 seconds when using :polynomially_longer</p>
+      </div>
+      <div class="form-group" id="fixed-wait-group" style="display: none;">
+        <label for="fixed-wait">Wait Duration (seconds)</label>
+        <input type="number" id="fixed-wait" value="3" min="0" step="1">
+        <p class="help-text">Fixed delay between retries (default: 3)</p>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="attempts">Attempts</label>
+        <input type="number" id="attempts" value="5" min="1" max="50">
+        <p class="help-text">Total attempts including the original execution (default: 5)</p>
+      </div>
+      <div class="form-group">
+        <label for="jitter">Jitter</label>
+        <input type="number" id="jitter" value="0.15" min="0" max="1" step="0.01">
+        <p class="help-text">Random delay factor, 0.15 = 15% (default: 0.15)</p>
+      </div>
+    </div>
+
+    <div class="code-preview" id="code-preview"></div>
+
+    <div class="formula-section" id="formula-section">
+      <h4>Delay Formula (polynomially_longer)</h4>
+      <div class="formula">
+        delay = (executions<sup>4</sup>) + (rand * executions<sup>4</sup> * jitter) + 2
+      </div>
+      <p class="jitter-note">
+        The table shows min/max wait times. Min assumes jitter = 0, max assumes jitter at full value.
+        Actual wait will be random between these values.
+      </p>
+    </div>
+  </div>
+
+  <table id="retry-table">
+    <thead>
+      <tr>
+        <th>Attempt</th>
+        <th>Executions</th>
+        <th>Wait (min)</th>
+        <th>Wait (max)</th>
+        <th>Cumulative (min)</th>
+        <th>Cumulative (max)</th>
+        <th>Remaining</th>
+      </tr>
+    </thead>
+    <tbody id="retry-tbody">
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <h3>Summary</h3>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-label">Total Retries</div>
+        <div class="summary-value" id="total-retries">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total Cumulative (min)</div>
+        <div class="summary-value" id="min-duration">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total Cumulative (max)</div>
+        <div class="summary-value" id="max-duration">-</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Last Wait (min/max)</div>
+        <div class="summary-value" id="last-wait">-</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const waitStrategySelect = document.getElementById('wait-strategy');
+    const fixedWaitGroup = document.getElementById('fixed-wait-group');
+    const fixedWaitInput = document.getElementById('fixed-wait');
+    const attemptsInput = document.getElementById('attempts');
+    const jitterInput = document.getElementById('jitter');
+    const retryTbody = document.getElementById('retry-tbody');
+    const codePreview = document.getElementById('code-preview');
+    const formulaSection = document.getElementById('formula-section');
+
+    function formatDuration(seconds) {
+      if (seconds < 60) {
+        return `${seconds.toFixed(1)}s`;
+      } else if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60);
+        return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+      } else if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.round((seconds % 3600) / 60);
+        return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+      } else {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.round((seconds % 86400) / 3600);
+        return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+      }
+    }
+
+    function formatDurationCompact(seconds) {
+      if (seconds < 60) {
+        return `${seconds.toFixed(0)}s`;
+      } else if (seconds < 3600) {
+        return `${(seconds / 60).toFixed(1)}m`;
+      } else if (seconds < 86400) {
+        return `${(seconds / 3600).toFixed(1)}h`;
+      } else {
+        return `${(seconds / 86400).toFixed(1)}d`;
+      }
+    }
+
+    function calculateDelay(strategy, executions, jitter, fixedWait) {
+      if (strategy === 'polynomially_longer') {
+        const baseDelay = Math.pow(executions, 4);
+        const minDelay = baseDelay + 2;
+        const maxDelay = baseDelay + (baseDelay * jitter) + 2;
+        return { min: minDelay, max: maxDelay };
+      } else {
+        const minDelay = fixedWait;
+        const maxDelay = fixedWait + (fixedWait * jitter);
+        return { min: minDelay, max: maxDelay };
+      }
+    }
+
+    function updateCodePreview() {
+      const strategy = waitStrategySelect.value;
+      const attempts = parseInt(attemptsInput.value) || 5;
+      const jitter = parseFloat(jitterInput.value) || 0.15;
+      const fixedWait = parseInt(fixedWaitInput.value) || 3;
+
+      let waitPart;
+      if (strategy === 'polynomially_longer') {
+        waitPart = '<span class="code-symbol">:polynomially_longer</span>';
+      } else {
+        waitPart = `<span class="code-number">${fixedWait}</span>`;
+      }
+
+      const jitterPart = jitter !== 0.15
+        ? `, jitter: <span class="code-number">${jitter}</span>`
+        : '';
+
+      codePreview.innerHTML = `<span class="code-keyword">retry_on</span> SomeException, wait: ${waitPart}, attempts: <span class="code-number">${attempts}</span>${jitterPart}`;
+    }
+
+    function updateTable() {
+      const strategy = waitStrategySelect.value;
+      const attempts = parseInt(attemptsInput.value) || 5;
+      const jitter = parseFloat(jitterInput.value) || 0.15;
+      const fixedWait = parseInt(fixedWaitInput.value) || 3;
+
+      // Show/hide formula section based on strategy
+      formulaSection.style.display = strategy === 'polynomially_longer' ? 'block' : 'none';
+
+      let html = '';
+      let cumulativeMin = 0;
+      let cumulativeMax = 0;
+      let lastWaitMin = 0;
+      let lastWaitMax = 0;
+
+      // First row: initial execution (attempt 1)
+      html += `
+        <tr>
+          <td class="attempt-num">1</td>
+          <td>-</td>
+          <td class="time-cell">-</td>
+          <td class="time-cell">-</td>
+          <td class="time-cell">0s</td>
+          <td class="time-cell">0s</td>
+          <td class="remaining">${attempts - 1}</td>
+        </tr>
+      `;
+
+      // Retry rows
+      for (let attempt = 2; attempt <= attempts; attempt++) {
+        const executions = attempt - 1; // executions count for delay calculation
+        const { min, max } = calculateDelay(strategy, executions, jitter, fixedWait);
+
+        cumulativeMin += min;
+        cumulativeMax += max;
+        lastWaitMin = min;
+        lastWaitMax = max;
+
+        const remaining = attempts - attempt;
+        const isLast = attempt === attempts;
+
+        html += `
+          <tr class="${isLast ? 'final-row' : ''}">
+            <td class="attempt-num">${attempt}</td>
+            <td>${executions}</td>
+            <td class="time-cell">${formatDuration(min)}</td>
+            <td class="time-cell">${formatDuration(max)}</td>
+            <td class="time-cell">${formatDuration(cumulativeMin)}</td>
+            <td class="time-cell">${formatDuration(cumulativeMax)}</td>
+            <td class="remaining">${remaining}</td>
+          </tr>
+        `;
+      }
+
+      retryTbody.innerHTML = html;
+
+      // Update summary
+      document.getElementById('total-retries').textContent = attempts - 1;
+      document.getElementById('min-duration').textContent = formatDuration(cumulativeMin);
+      document.getElementById('max-duration').textContent = formatDuration(cumulativeMax);
+      document.getElementById('last-wait').textContent = `${formatDuration(lastWaitMin)} / ${formatDuration(lastWaitMax)}`;
+
+      updateCodePreview();
+    }
+
+    // Event listeners
+    waitStrategySelect.addEventListener('change', () => {
+      fixedWaitGroup.style.display = waitStrategySelect.value === 'fixed' ? 'block' : 'none';
+      updateTable();
+    });
+
+    attemptsInput.addEventListener('input', updateTable);
+    jitterInput.addEventListener('input', updateTable);
+    fixedWaitInput.addEventListener('input', updateTable);
+
+    // Initial render
+    updateTable();
+  </script>
+</body>
+</html>
